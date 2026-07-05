@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pinboard — a to-do list you can pin up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cork-a: #9c6b45;
+    --cork-b: #86592f;
+    --card: #fffdf6;
+    --card-edge: #e9ddbd;
+    --ink: #2c2620;
+    --ink-soft: #6b6152;
+    --pin-red: #c1432e;
+    --pin-blue: #3e6f8e;
+    --pin-yellow: #d9a441;
+    --pin-green: #5c8a52;
+    --done: #6b8f52;
+    --shadow: rgba(30, 20, 8, 0.35);
+    --focus-ring: #d9a441;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+  }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 15% 20%, rgba(0,0,0,0.05) 0, transparent 3%),
+      radial-gradient(circle at 40% 65%, rgba(0,0,0,0.04) 0, transparent 3%),
+      radial-gradient(circle at 70% 30%, rgba(0,0,0,0.05) 0, transparent 3%),
+      radial-gradient(circle at 85% 75%, rgba(0,0,0,0.04) 0, transparent 3%),
+      radial-gradient(circle at 55% 10%, rgba(0,0,0,0.04) 0, transparent 3%),
+      linear-gradient(160deg, var(--cork-a), var(--cork-b));
+    background-size: 60px 60px, 70px 70px, 55px 55px, 65px 65px, 50px 50px, cover;
+    padding: 36px 18px 60px;
+  }
+
+  .board {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .board-title {
+    text-align: center;
+    margin-bottom: 26px;
+  }
+
+  .board-title h1 {
+    font-family: 'Caveat', cursive;
+    font-size: 52px;
+    font-weight: 700;
+    color: #fffdf6;
+    margin: 0;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    transform: rotate(-1.5deg);
+  }
+
+  .board-title p {
+    font-size: 13px;
+    color: rgba(255,253,246,0.75);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 4px 0 0;
+  }
+
+  /* ---------- INPUT CARD ---------- */
+  .add-card {
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: 4px;
+    padding: 18px 18px 16px;
+    box-shadow: 0 10px 22px -8px var(--shadow);
+    position: relative;
+    margin-bottom: 30px;
+    transform: rotate(-0.4deg);
+  }
+
+  .add-card .pin { top: -12px; left: 50%; transform: translateX(-50%); }
+
+  .add-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .add-row input[type="text"] {
+    flex: 1;
+    border: none;
+    border-bottom: 2px dashed var(--card-edge);
+    background: transparent;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px;
+    color: var(--ink);
+    padding: 8px 4px;
+  }
+  .add-row input[type="text"]::placeholder { color: var(--ink-soft); }
+  .add-row input[type="text"]:focus {
+    outline: none;
+    border-bottom-color: var(--pin-red);
+  }
+
+  .tag-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .tag-choice {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    background: #f1ead4;
+    color: var(--ink-soft);
+    transition: all 0.15s ease;
+  }
+  .tag-choice[data-tag="urgent"] { color: var(--pin-red); }
+  .tag-choice[data-tag="someday"] { color: var(--pin-blue); }
+  .tag-choice[data-tag="today"] { color: var(--pin-green); }
+  .tag-choice.selected {
+    background: currentColor;
+    color: #fffdf6 !important;
+  }
+  .tag-choice.selected[data-tag="urgent"] { background: var(--pin-red); }
+  .tag-choice.selected[data-tag="someday"] { background: var(--pin-blue); }
+  .tag-choice.selected[data-tag="today"] { background: var(--pin-green); }
+
+  .add-btn {
+    margin-left: auto;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    border: none;
+    background: var(--ink);
+    color: #fffdf6;
+    padding: 7px 16px;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.15s ease;
+  }
+  .add-btn:hover { background: var(--pin-red); }
+  .add-btn:active { transform: scale(0.95); }
+
+  /* ---------- FILTER STRIP ---------- */
+  .filters {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    margin-bottom: 26px;
+  }
+  .filter-btn {
+    background: none;
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    color: rgba(255,253,246,0.7);
+    cursor: pointer;
+    padding: 4px 2px;
+    border-bottom: 2px solid transparent;
+  }
+  .filter-btn.active {
+    color: #fffdf6;
+    border-bottom-color: var(--pin-yellow);
+  }
+
+  /* ---------- CARD GRID ---------- */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 24px 20px;
+  }
+
+  .card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: 3px;
+    padding: 22px 16px 16px;
+    box-shadow: 0 10px 18px -8px var(--shadow);
+    animation: pin-in 0.3s ease;
+    transition: transform 0.18s ease, opacity 0.3s ease, box-shadow 0.18s ease;
+  }
+  .card:nth-child(3n+1) { transform: rotate(-1.6deg); }
+  .card:nth-child(3n+2) { transform: rotate(1deg); }
+  .card:nth-child(3n)   { transform: rotate(-0.6deg); }
+  .card:hover { box-shadow: 0 16px 26px -10px var(--shadow); }
+
+  @keyframes pin-in {
+    from { opacity: 0; transform: translateY(-14px) rotate(0deg) scale(0.94); }
+  }
+
+  .card.removing {
+    animation: unpin 0.3s ease forwards;
+  }
+  @keyframes unpin {
+    to { opacity: 0; transform: translateY(30px) rotate(14deg) scale(0.9); }
+  }
+
+  .pin {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    top: -9px;
+    left: 20px;
+    box-shadow: 0 3px 4px rgba(0,0,0,0.35), inset 0 1px 1px rgba(255,255,255,0.4);
+  }
+  .card[data-tag="urgent"] .pin { background: var(--pin-red); }
+  .card[data-tag="today"] .pin { background: var(--pin-green); }
+  .card[data-tag="someday"] .pin { background: var(--pin-blue); }
+  .card[data-tag="none"] .pin { background: var(--pin-yellow); }
+
+  .card-tag {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .card-text {
+    font-size: 16px;
+    line-height: 1.4;
+    color: var(--ink);
+    margin: 0 0 14px;
+    word-break: break-word;
+  }
+
+  .card.done .card-text {
+    color: var(--ink-soft);
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .check-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    color: var(--ink-soft);
+    padding: 0;
+  }
+
+  .check-circle {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--ink-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+  }
+  .card.done .check-circle {
+    background: var(--done);
+    border-color: var(--done);
+  }
+  .check-circle::after {
+    content: "";
+    width: 7px;
+    height: 4px;
+    border-left: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translateY(-1px);
+    opacity: 0;
+  }
+  .card.done .check-circle::after { opacity: 1; }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    color: var(--ink-soft);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .remove-btn:hover { color: var(--pin-red); }
+
+  .stamp {
+    position: absolute;
+    top: 38%;
+    right: 10px;
+    font-family: 'Caveat', cursive;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--done);
+    border: 3px solid var(--done);
+    border-radius: 8px;
+    padding: 0 10px;
+    transform: rotate(-14deg);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .card.done .stamp {
+    opacity: 0.85;
+    transform: rotate(-14deg) scale(1);
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: rgba(255,253,246,0.75);
+    font-family: 'Caveat', cursive;
+    font-size: 26px;
+    padding: 30px 0;
+  }
+
+  .board-footer {
+    text-align: center;
+    margin-top: 30px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,253,246,0.6);
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 480px) {
+    .board-title h1 { font-size: 40px; }
+    .add-row { flex-wrap: wrap; }
+    .add-btn { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="board">
+  <div class="board-title">
+    <h1>Pinboard</h1>
+    <p>things to do, pinned up so you don't forget</p>
+  </div>
+
+  <div class="add-card">
+    <div class="pin"></div>
+    <div class="add-row">
+      <input type="text" id="taskInput" placeholder="Pin a new task…" maxlength="120">
+    </div>
+    <div class="tag-row">
+      <span class="tag-choice selected" data-tag="none">plain</span>
+      <span class="tag-choice" data-tag="today">today</span>
+      <span class="tag-choice" data-tag="urgent">urgent</span>
+      <span class="tag-choice" data-tag="someday">someday</span>
+      <button class="add-btn" id="addBtn">Pin it</button>
+    </div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="active">Still up</button>
+    <button class="filter-btn" data-filter="done">Taken down</button>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="board-footer" id="counter">0 pinned · 0 done</div>
+</div>
+
+<script>
+(function () {
+  // In-memory store. See README for the 3-line swap to localStorage
+  // once this is deployed on your own site (works in every real browser —
+  // just blocked inside this in-chat preview sandbox).
+  let tasks = JSON.parse(localStorage.getItem('pinboard-tasks') || '[]');
+  let idCounter = 1;
+  let activeFilter = 'all';
+  let selectedTag = 'none';
+
+  const cardsEl = document.getElementById('cards');
+  const input = document.getElementById('taskInput');
+  const addBtn = document.getElementById('addBtn');
+  const counter = document.getElementById('counter');
+
+  function addTask() {
+    const text = input.value.trim();
+    if (!text) {
+      input.focus();
+      return;
+    }
+    tasks.unshift({ id: idCounter++, text, tag: selectedTag, done: false });
+    input.value = '';
+    render();
+    input.focus();
+  }
+
+  function toggleDone(id) {
+    const t = tasks.find(t => t.id === id);
+    if (t) t.done = !t.done;
+    render();
+  }
+
+  function removeTask(id) {
+    const cardEl = cardsEl.querySelector(`[data-id="${id}"]`);
+    if (cardEl) {
+      cardEl.classList.add('removing');
+      setTimeout(() => {
+        tasks = tasks.filter(t => t.id !== id);
+        render();
+      }, 260);
+    } else {
+      tasks = tasks.filter(t => t.id !== id);
+      render();
+    }
+  }
+
+  function render() {
+    let visible = tasks;
+    if (activeFilter === 'active') visible = tasks.filter(t => !t.done);
+    if (activeFilter === 'done') visible = tasks.filter(t => t.done);
+
+    cardsEl.innerHTML = '';
+
+    if (visible.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = activeFilter === 'done'
+        ? "Nothing taken down yet."
+        : activeFilter === 'active'
+          ? "Nothing left up — nicely done."
+          : "The board is empty. Pin something.";
+      cardsEl.appendChild(empty);
+    } else {
+      visible.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'card' + (t.done ? ' done' : '');
+        card.dataset.id = t.id;
+        card.dataset.tag = t.tag;
+        card.innerHTML = `
+          <div class="pin"></div>
+          ${t.tag !== 'none' ? `<span class="card-tag">${t.tag}</span>` : ''}
+          <p class="card-text">${escapeHtml(t.text)}</p>
+          <div class="card-footer">
+            <button class="check-btn" data-action="toggle">
+              <span class="check-circle"></span> ${t.done ? 'done' : 'mark done'}
+            </button>
+            <button class="remove-btn" data-action="remove">unpin</button>
+          </div>
+          <div class="stamp">DONE</div>
+        `;
+        card.querySelector('[data-action="toggle"]').addEventListener('click', () => toggleDone(t.id));
+        card.querySelector('[data-action="remove"]').addEventListener('click', () => removeTask(t.id));
+        cardsEl.appendChild(card);
+      });
+    }
+
+    const doneCount = tasks.filter(t => t.done).length;
+    counter.textContent = `${tasks.length} pinned · ${doneCount} done`;
+    localStorage.setItem('pinboard-tasks', JSON.stringify(tasks));
+  }
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  addBtn.addEventListener('click', addTask);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') addTask();
+  });
+
+  document.querySelectorAll('.tag-choice').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.tag-choice').forEach(t => t.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedTag = el.dataset.tag;
+    });
+  });
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      render();
+    });
+  });
+
+
+  render();
+})();
+</script>
+
+</body>
+</html>
